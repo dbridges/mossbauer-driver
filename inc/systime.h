@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #ifndef SYSTIME_COUNTS_PER_MS
-#define SYSTIME_COUNTS_PER_MS       1
+#define SYSTIME_COUNTS_PER_MS       100
 #endif
 
 void SysTime_Init(void);

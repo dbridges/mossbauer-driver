@@ -24,7 +24,7 @@ SRCS  += stm32f4xx_adc.c
 #SRCS  += stm32f4xx_can.c
 #SRCS  += stm32f4xx_crc.c
 #SRCS  += stm32f4xx_cryp.c
-#SRCS  += stm32f4xx_dac.c
+SRCS  += stm32f4xx_dac.c
 #SRCS  += stm32f4xx_dbgmcu.c
 #SRCS  += stm32f4xx_dcmi.c
 SRCS  += stm32f4xx_dma.c
@@ -42,7 +42,7 @@ SRCS  += stm32f4xx_rcc.c
 #SRCS  += stm32f4xx_sdio.c
 #SRCS  += stm32f4xx_spi.c
 #SRCS  += stm32f4xx_syscfg.c
-#SRCS  += stm32f4xx_tim.c
+SRCS  += stm32f4xx_tim.c
 SRCS  += stm32f4xx_usart.c
 #SRCS  += stm32f4xx_wwdg.c
 SRCS  += misc.c
@@ -84,7 +84,7 @@ FLOAT_TYPE = hard
 INCLUDE = $(addprefix -I,$(INC_DIRS))
 
 DEFS    = -DUSE_STDPERIPH_DRIVER
-DEFS   += -DSYSTIME_COUNTS_PER_MS=1
+DEFS   += -DSYSTIME_COUNTS_PER_MS=100
 DEFS   += -DHSE_VALUE=8000000
 # if you use the following option, you must implement the function 
 #    assert_failed(uint8_t* file, uint32_t line)
