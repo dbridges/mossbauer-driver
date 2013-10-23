@@ -6,21 +6,17 @@
 #include "stm32f4xx.h"
 #include "stm32f4xx_conf.h"
 
-#include "systime.h"
 #include "macros.h"
-#include "scheduler.h"
 
 #define ADC3_DR_ADDRESS         ((uint32_t)0x4001224C)
 #define DAC_DHR12R2_ADDRESS     0x40007414
 #define DAC_DHR8R1_ADDRESS      0x40007410
 
-#define CYCLE_COUNTS            900        // 5 Hz at 2.5 kS/s
-
-static Task *pid_task;
-static uint16_t counter = 0;
+#define CYCLE_COUNTS            2000        // 5 Hz at 10 kS/s
 
 __IO uint16_t ADC3ConvertedValue;
 __IO uint16_t DACValue;
+__IO int32_t counter = 0;
 
 static void ADC3_CH12_DMA_Config(void)
 {
@@ -120,6 +116,47 @@ void TIM6_Config(void)
     TIM_Cmd(TIM6, ENABLE);
 }
 
+void TIM2_Config(void)
+{
+    TIM_TimeBaseInitTypeDef    TIM_TimeBaseStructure;
+    NVIC_InitTypeDef NVIC_InitStructure;
+
+    /* TIM2 Periph clock enable */
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
+
+    NVIC_InitStructure.NVIC_IRQChannel = TIM2_IRQn;
+    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 3;
+    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+    NVIC_Init(&NVIC_InitStructure);
+
+    /* Time base configuration */
+    TIM_TimeBaseStructInit(&TIM_TimeBaseStructure);
+    TIM_TimeBaseStructure.TIM_Prescaler = SystemCoreClock/1000000;
+    TIM_TimeBaseStructure.TIM_Period = 100 - 2;
+    TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1;
+    TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up; 
+    TIM_TimeBaseInit(TIM2, &TIM_TimeBaseStructure);
+
+    /* TIM2 TRGO selection */
+    TIM_SelectOutputTrigger(TIM2, TIM_TRGOSource_Update);
+    
+    /* TIM2 enable counter */
+    TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
+    TIM_Cmd(TIM2, ENABLE);
+}
+
+void TIM2_IRQHandler(void)
+{
+    counter++;
+    DAC_SetChannel2Data(DAC_Align_12b_R, 
+            (uint16_t)(-0.0035 * (counter - 1000) * (counter - 1000) + 3500));
+    if (counter >= CYCLE_COUNTS) {
+        counter = 0;
+    }
+    TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
+}
+
 uint16_t adc_read(void)
 {
     uint16_t val1;
@@ -128,17 +165,14 @@ uint16_t adc_read(void)
     return (val1 + ADC3ConvertedValue) / 2;
 }
 
-/* Task Callbacks */
-void pid_callback(Task *task)
-{
-    counter++;
-    DAC_SetChannel2Data(DAC_Align_12b_R, 
-            (uint16_t)(-0.014 * (counter - 500) * (counter - 500) + 3500));
-    if (counter > CYCLE_COUNTS) {
-        /*Scheduler_SetTaskEnabled(task, FALSE);*/
-        counter = 0;
-    }
-}
+/*void pid_callback(Task *task)*/
+/*{*/
+    /*counter++;*/
+    /*if (counter > CYCLE_COUNTS) {*/
+        /*[>Scheduler_SetTaskEnabled(task, FALSE);<]*/
+        /*counter = 0;*/
+    /*}*/
+/*}*/
 
 int main(void)
 {
@@ -146,12 +180,13 @@ int main(void)
     ADC3_CH12_DMA_Config();
     DAC_Ch2_Config();
     ADC_SoftwareStartConv(ADC3);
+    TIM2_Config();
 
-    SysTime_Init();
+    /*SysTime_Init();*/
     
-    pid_task = Scheduler_AddTask(systime(), 20, &pid_callback, ENABLE);
+    /*pid_task = Scheduler_AddTask(systime(), 20, &pid_callback, ENABLE);*/
     while (1) {
-        Scheduler_Run(systime());
+        /*Scheduler_Run(systime());*/
     }
 
     return 0;
