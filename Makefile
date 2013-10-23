@@ -95,7 +95,7 @@ DEFS   += -DHSE_VALUE=8000000
 CFLAGS  = -std=gnu99
 CFLAGS += -Wall -Wextra -Warray-bounds -Wno-unused-parameter -Wno-unused-variable -Wno-strict-aliasing
 CFLAGS += -mlittle-endian -mthumb -mcpu=cortex-m4 -mthumb-interwork
-CFLAGS += -mfloat-abi=hard -mfpu=fpv4-sp-d16
+CFLAGS += -mfloat-abi=hard -mfpu=fpv4-sp-d16 -fsingle-precision-constant
 
 ## Defines
 

@@ -13,10 +13,18 @@
 #define DAC_DHR8R1_ADDRESS      0x40007410
 
 #define CYCLE_COUNTS            2000        // 5 Hz at 10 kS/s
+#define KP                      0.0098f
+#define PEAK_VAL                2540.0f
+#define BASE_VAL                1500.0f
+#define MAGIC_CONSTANT          -((PEAK_VAL - BASE_VAL) / 1000000.0f)
 
-__IO uint16_t ADC3ConvertedValue;
-__IO uint16_t DACValue;
-__IO int32_t counter = 0;
+__IO uint16_t   ADC3ConvertedValue;
+__IO uint16_t   DACValue;
+__IO int32_t    counter = 1000;
+__IO uint32_t   running = TRUE;
+__IO float      setpoint = 0.0f;
+__IO float      error = 0.0f;
+__IO float      dac_val = 0.0f;
 
 static void ADC3_CH12_DMA_Config(void)
 {
@@ -146,17 +154,6 @@ void TIM2_Config(void)
     TIM_Cmd(TIM2, ENABLE);
 }
 
-void TIM2_IRQHandler(void)
-{
-    counter++;
-    DAC_SetChannel2Data(DAC_Align_12b_R, 
-            (uint16_t)(-0.0035 * (counter - 1000) * (counter - 1000) + 3500));
-    if (counter >= CYCLE_COUNTS) {
-        counter = 0;
-    }
-    TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
-}
-
 uint16_t adc_read(void)
 {
     uint16_t val1;
@@ -165,28 +162,41 @@ uint16_t adc_read(void)
     return (val1 + ADC3ConvertedValue) / 2;
 }
 
-/*void pid_callback(Task *task)*/
-/*{*/
-    /*counter++;*/
-    /*if (counter > CYCLE_COUNTS) {*/
-        /*[>Scheduler_SetTaskEnabled(task, FALSE);<]*/
-        /*counter = 0;*/
-    /*}*/
-/*}*/
+void TIM2_IRQHandler(void)
+{
+    if (running) {
+        counter++;
+        setpoint = MAGIC_CONSTANT * (counter - 1000) * (counter - 1000) + PEAK_VAL;
+        error = setpoint - adc_read();
+        dac_val += (KP * error);
+
+        if (dac_val < 0) {
+            dac_val = 0;
+        } else if (dac_val > 4095) {
+            dac_val = 4095;
+        }
+
+        DAC_SetChannel2Data(DAC_Align_12b_R, (uint16_t)dac_val);
+
+        if (counter >= CYCLE_COUNTS) {
+            counter = 0;
+        }
+    }
+    TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
+}
 
 int main(void)
 {
+    // Enable hardware floating point
+    SCB->CPACR |= ((3UL << 10*2)|(3UL << 11*2));
+
     TIM6_Config();
     ADC3_CH12_DMA_Config();
     DAC_Ch2_Config();
     ADC_SoftwareStartConv(ADC3);
     TIM2_Config();
 
-    /*SysTime_Init();*/
-    
-    /*pid_task = Scheduler_AddTask(systime(), 20, &pid_callback, ENABLE);*/
     while (1) {
-        /*Scheduler_Run(systime());*/
     }
 
     return 0;
