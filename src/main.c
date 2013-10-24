@@ -79,7 +79,7 @@ static void ADC3_CH12_DMA_Config(void)
     ADC_Cmd(ADC3, ENABLE);
 }
 
-void DAC_Ch2_Config(void)
+static void DAC_Ch2_Config(void)
 {
     GPIO_InitTypeDef GPIO_InitStructure;
     DAC_InitTypeDef  DAC_InitStructure;
@@ -103,7 +103,7 @@ void DAC_Ch2_Config(void)
     DAC_Cmd(DAC_Channel_2, ENABLE);
 }
 
-void TIM6_Config(void)
+static void TIM6_Config(void)
 {
     TIM_TimeBaseInitTypeDef    TIM_TimeBaseStructure;
     /* TIM6 Periph clock enable */
@@ -124,7 +124,7 @@ void TIM6_Config(void)
     TIM_Cmd(TIM6, ENABLE);
 }
 
-void TIM2_Config(void)
+static void TIM2_Config(void)
 {
     TIM_TimeBaseInitTypeDef    TIM_TimeBaseStructure;
     NVIC_InitTypeDef NVIC_InitStructure;
@@ -154,6 +154,20 @@ void TIM2_Config(void)
     TIM_Cmd(TIM2, ENABLE);
 }
 
+static void Trigger_Config(void)
+{
+    GPIO_InitTypeDef GPIO_InitStructure;
+
+    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
+    GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_0;
+    GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_IN;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+    GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_DOWN;
+    GPIO_Init(GPIOB, &GPIO_InitStructure);
+    
+}
+
 uint16_t adc_read(void)
 {
     uint16_t val1;
@@ -181,6 +195,8 @@ void TIM2_IRQHandler(void)
         if (counter >= CYCLE_COUNTS) {
             counter = 0;
         }
+    } else {
+        // TODO Read trigger pin, add port macro
     }
     TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
 }
@@ -195,6 +211,7 @@ int main(void)
     DAC_Ch2_Config();
     ADC_SoftwareStartConv(ADC3);
     TIM2_Config();
+    Trigger_Config();
 
     while (1) {
     }
